@@ -137,8 +137,7 @@ class KMeansVectorized:
         self.n_iter_ = 0
     
     def _initialize_centroids(self, X):
-        if self.random_state is not None:
-            np.random.seed(self.random_state)
+        rng = np.random.default_rng(self.random_state)
         
         m = X.shape[0]
         centroids = []
@@ -151,8 +150,13 @@ class KMeansVectorized:
                 dist = np.sum((X - c) ** 2, axis=1)
                 distances = np.minimum(distances, dist)
             
-            probs = distances / np.sum(distances)
-            next_idx = np.random.choice(m, p=probs)
+            total = float(np.sum(distances))
+            if total <= 0 or not np.isfinite(total):
+                # Degenerate case (e.g. duplicated points): sample uniformly.
+                next_idx = int(rng.integers(m))
+            else:
+                probs = distances / total
+                next_idx = int(rng.choice(m, p=probs))
             centroids.append(X[next_idx].copy())
         
         return np.array(centroids)
